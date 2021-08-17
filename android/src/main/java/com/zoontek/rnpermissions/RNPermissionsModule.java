@@ -9,6 +9,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Process;
 import android.provider.Settings;
 import android.util.SparseArray;
@@ -187,6 +188,17 @@ public class RNPermissionsModule extends ReactContextBaseJavaModule implements P
       return;
     }
 
+    //android 11
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      String fieldName = getFieldName(permission);
+      if (fieldName.equals("READ_EXTERNAL_STORAGE") || fieldName.equals("WRITE_EXTERNAL_STORAGE")) {
+        promise.resolve(Environment.isExternalStorageManager()
+          ? GRANTED
+          : BLOCKED);
+        return;
+      }
+    }
+
     Context context = getReactApplicationContext().getBaseContext();
 
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
@@ -225,6 +237,32 @@ public class RNPermissionsModule extends ReactContextBaseJavaModule implements P
     if (permission == null || !permissionExists(permission)) {
       promise.resolve(UNAVAILABLE);
       return;
+    }
+
+    //android 11
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      String fieldName = getFieldName(permission);
+      if (fieldName.equals("READ_EXTERNAL_STORAGE") || fieldName.equals("WRITE_EXTERNAL_STORAGE")) {
+        if (Environment.isExternalStorageManager()) {
+          promise.resolve(GRANTED);
+          return;
+        }
+
+        try {
+          final ReactApplicationContext reactContext = getReactApplicationContext();
+          final Intent intent = new Intent();
+          final String packageName = reactContext.getPackageName();
+
+          intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+          intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+          intent.setData(Uri.fromParts("package", packageName, null));
+
+          reactContext.startActivity(intent);
+          promise.resolve(BLOCKED);
+        } catch (Exception e) {
+          promise.reject(ERROR_INVALID_ACTIVITY, e);
+        }
+      }
     }
 
     Context context = getReactApplicationContext().getBaseContext();
@@ -352,11 +390,11 @@ public class RNPermissionsModule extends ReactContextBaseJavaModule implements P
 
     try {
       PermissionAwareActivity activity = getPermissionAwareActivity();
-      boolean[] rationaleStatuses = new boolean[permissionsToCheck.size()];
+      boolean[] rationaleStatuses = new boolean[permissions.size()];
 
-      for (int i = 0; i < permissionsToCheck.size(); i++) {
+      for (int i = 0; i < permissions.size(); i++) {
         rationaleStatuses[i] = activity
-          .shouldShowRequestPermissionRationale(permissionsToCheck.get(i));
+          .shouldShowRequestPermissionRationale(permissions.getString(i));
       }
 
       mRequests.put(mRequestCode, new Request(
