@@ -128,6 +128,8 @@ public class RNPermissionsModule extends ReactContextBaseJavaModule implements P
       return "WRITE_CONTACTS";
     if (permission.equals("android.permission.WRITE_EXTERNAL_STORAGE"))
       return "WRITE_EXTERNAL_STORAGE";
+    if (permission.equals("android.permission.MANAGE_EXTERNAL_STORAGE"))
+      return "MANAGE_EXTERNAL_STORAGE";
 
     return null;
   }
@@ -191,7 +193,11 @@ public class RNPermissionsModule extends ReactContextBaseJavaModule implements P
     //android 11
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
       String fieldName = getFieldName(permission);
-      if (fieldName.equals("READ_EXTERNAL_STORAGE") || fieldName.equals("WRITE_EXTERNAL_STORAGE")) {
+      if (fieldName.equals("WRITE_EXTERNAL_STORAGE")) {
+        promise.resolve(GRANTED);
+        return;
+      }
+      if (fieldName.equals("MANAGE_EXTERNAL_STORAGE")) {
         promise.resolve(Environment.isExternalStorageManager()
           ? GRANTED
           : BLOCKED);
@@ -242,7 +248,11 @@ public class RNPermissionsModule extends ReactContextBaseJavaModule implements P
     //android 11
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
       String fieldName = getFieldName(permission);
-      if (fieldName.equals("READ_EXTERNAL_STORAGE") || fieldName.equals("WRITE_EXTERNAL_STORAGE")) {
+      if (fieldName.equals("WRITE_EXTERNAL_STORAGE")) {
+        promise.resolve(GRANTED);
+        return;
+      }
+      if (fieldName.equals("MANAGE_EXTERNAL_STORAGE")) {
         if (Environment.isExternalStorageManager()) {
           promise.resolve(GRANTED);
           return;
